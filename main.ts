@@ -1,6 +1,7 @@
-// Placeholder edition for make.fun news-image-20261124.
-// Draws the final layout with PLACEHOLDER story blocks; the 25 November
-// refresh replaces every story line with the verified news of 24 November 2026.
+// Final edition for make.fun news-image-20261124.
+// Draws a newspaper poster summing up the verified news of 24 November 2026:
+// five main stories plus an IN BRIEF strip, all figures re-checked on
+// 25 November 2026 against Rapaport, AP, AFP/Reuters, Al Jazeera and Yonhap.
 // Node 22+, standard library only. No network, no file reads, deterministic:
 // two runs write identical bytes to /output/entry.png (or $MAKEFUN_OUTPUT_DIR).
 
@@ -65,6 +66,7 @@ const GLYPHS = {
   "_": ["00000", "00000", "00000", "00000", "00000", "00000", "11111"],
   "*": ["00000", "10101", "01110", "10101", "00000", "00000", "00000"],
   "%": ["11001", "11010", "00010", "00100", "01000", "01011", "10011"],
+  "$": ["00100", "01111", "10100", "01110", "00101", "11110", "00100"],
   "&": ["01100", "10010", "10100", "01000", "10101", "10010", "01101"],
 };
 
@@ -114,6 +116,64 @@ function centerText(s, y, scale, c) {
   drawText(s, Math.round((W - textWidth(s, scale)) / 2), y, scale, c);
 }
 
+// Word-wrap a line to maxW pixels; returns the number of lines drawn.
+function drawWrapped(s, x, y, scale, maxW, lineH, c) {
+  const words = s.split(" ");
+  const lines = [];
+  let cur = "";
+  for (const w of words) {
+    const trial = cur ? cur + " " + w : w;
+    if (textWidth(trial, scale) > maxW && cur) {
+      lines.push(cur);
+      cur = w;
+    } else {
+      cur = trial;
+    }
+  }
+  if (cur) lines.push(cur);
+  lines.forEach((ln, i) => drawText(ln, x, y + i * lineH, scale, c));
+  return lines.length;
+}
+
+// --- stories: verified news of 24 November 2026 ---
+const STORIES = [
+  {
+    kicker: "HONG KONG - AUCTION",
+    headline: "PINK PETAL SELLS FOR HK$115.5M",
+    d1: "8.41CT FANCY VIVID PURPLE-PINK DIAMOND RING TOPS SALE",
+    d2: "CHRISTIE'S SALE TOTALS HK$536.9M, RING BEATS HK$95M ESTIMATE",
+  },
+  {
+    kicker: "UNITED STATES - CHIPS",
+    headline: "NVIDIA RALLY FADES AFTER COMEBACK",
+    d1: "SHARES FALL 5.6% A DAY AFTER 31% JUMP ON HUANG RETURN",
+    d2: "TAIWAN TSMC JUMPS 9.9% TO ITS DAILY TRADING LIMIT",
+  },
+  {
+    kicker: "UKRAINE - WAR WIDENS",
+    headline: "KYIV DEFENDS LIBYA SHIP STRIKE",
+    d1: "FOREIGN MINISTER CALLS BENGHAZI ATTACK SELF-DEFENCE",
+    d2: "RUSSIAN STRIKE KILLS 2, WOUNDS 44 IN ZAPORIZHZHIA",
+  },
+  {
+    kicker: "GAZA - CEASEFIRE STRAIN",
+    headline: "HAMAS SECURITY CHIEF KILLED IN GAZA",
+    d1: "NAEEM ABU NAHEL KILLED IN GAZA CITY STRIKE",
+    d2: "7 KILLED IN GAZA STRIKES DESPITE CEASEFIRE, OFFICIALS SAY",
+  },
+  {
+    kicker: "INDONESIA - DISASTER",
+    headline: "26 DEAD IN CANDY FACTORY FIRE",
+    d1: "TOLL CONFIRMED TUESDAY AFTER SATURDAY BLAZE IN SERANG",
+    d2: "MOST VICTIMS DIED TRYING TO REACH EMERGENCY EXIT",
+  },
+];
+const BRIEF = [
+  "OHARE: EQUIPMENT OUTAGE GROUND STOP, 3RD STRAIGHT DAY OF US AIRPORT STOPS",
+  "MEXICO WILL TRY EL CHAPO ISIDRO AT HOME DESPITE US EXTRADITION REQUEST",
+  "KOREA: 5 RUSSIAN JETS ENTER AIR DEFENCE ZONE, ALERT LIFTED, NO BREACH",
+];
+
 // --- layout ---
 rect(0, 0, W, H, PAPER);
 // masthead band
@@ -121,32 +181,33 @@ rect(0, 0, W, 128, INK);
 rect(0, 128, W, 6, GOLD);
 centerText("24 NOVEMBER 2026", 26, 8, [255, 255, 255]);
 centerText("ONE DAY IN ONE IMAGE", 92, 3, GOLD);
-// placeholder flag
-centerText("PLACEHOLDER EDITION", 152, 3, RED);
 // five story rows
-const rowY0 = 196;
-const rowH = 112;
-const gap = 14;
+const rowY0 = 140;
+const rowH = 126;
+const gap = 10;
 const accents = [RED, INK, GOLD, [46, 90, 120], [110, 70, 120]];
 for (let n = 0; n < 5; n++) {
+  const st = STORIES[n];
   const y = rowY0 + n * (rowH + gap);
   rect(48, y, 928, rowH, CARD);
   rect(48, y, 928, 2, RULE);
   rect(48, y + rowH - 2, 928, 2, RULE);
   rect(48, y, 12, rowH, accents[n]);
   // number chip: digit centred inside the 60x60 chip at x=84
-  rect(84, y + 26, 60, 60, accents[n]);
-  drawText(String(n + 1), 99, y + 35, 6, [255, 255, 255]);
-  drawText("STORY " + (n + 1), 168, y + 24, 3, INK);
-  drawText("PLACEHOLDER", 168, y + 60, 4, GREY);
+  rect(84, y + 33, 60, 60, accents[n]);
+  drawText(String(n + 1), 99, y + 42, 6, [255, 255, 255]);
+  drawText(st.kicker, 168, y + 16, 2, accents[n]);
+  const hl = drawWrapped(st.headline, 168, y + 38, 3, 800, 24, INK);
+  const dy = y + 38 + hl * 24 + 8;
+  drawText(st.d1, 168, dy, 2, [70, 80, 95]);
+  drawText(st.d2, 168, dy + 20, 2, [70, 80, 95]);
 }
 // in-brief strip
-rect(48, 852, 928, 64, INK);
-drawText("IN BRIEF:", 72, 872, 3, GOLD);
-drawText("PLACEHOLDER", 72 + textWidth("IN BRIEF: ", 3) + 12, 872, 3, [255, 255, 255]);
+rect(48, 822, 928, 118, INK);
+drawText("IN BRIEF:", 72, 840, 3, GOLD);
+BRIEF.forEach((ln, i) => drawText(ln, 72, 866 + i * 22, 2, [255, 255, 255]));
 // footer
-centerText("STORIES TO BE FILLED IN FROM THE FULL NEWS OF 24 NOV 2026", 940, 2, GREY);
-centerText("AT THE 25 NOVEMBER REFRESH - PLACEHOLDER, NOT FINAL NEWS", 962, 2, GREY);
+centerText("FIGURES AS REPORTED ON 24 NOV 2026 - RAPAPORT, AP, AFP, REUTERS, YONHAP", 958, 2, GREY);
 
 // --- PNG encode (RGB, filter 0) ---
 const crcTable = [];
